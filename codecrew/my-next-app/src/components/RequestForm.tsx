@@ -12,20 +12,47 @@ export default function RequestForm() {
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission logic here
-    console.log({
-      name,
-      contact,
-      address,
-      typeOfHelp,
-      quantity,
-      description,
-      photo,
-    });
-    alert("Request submitted!");
+  // const handleSubmit = (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   // Handle form submission logic here
+  //   console.log({
+  //     name,
+  //     contact,
+  //     address,
+  //     typeOfHelp,
+  //     quantity,
+  //     description,
+  //     photo,
+  //   });
+  //   alert("Request submitted!");
+  // };
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const requestData = {
+    title: typeOfHelp,
+    description: description,
+    location: address,
   };
+
+  try {
+    const response = await fetch('/api/community-needs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestData),
+    });
+
+    if (!response.ok) throw new Error('Submission failed');
+
+    alert('Request submitted successfully!');
+    // Optionally reset form fields here
+  } catch (err) {
+  const message = err instanceof Error ? err.message : String(err);
+  alert(`Error: ${message}`);
+}
+
+};
 
   return (
     <div className="max-w-lg mx-auto bg-white p-6 rounded shadow-md">
