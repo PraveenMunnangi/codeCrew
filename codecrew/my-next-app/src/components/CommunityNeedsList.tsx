@@ -1,7 +1,8 @@
-// src/components/CommunityNeedsList.tsx
+// src/components/CommunityNeedsList.tsx (updated)
 "use client";
 
 import { useState, useEffect } from "react";
+import DonationForm from "./DonationForm";
 
 type CommunityNeed = {
   id: number;
@@ -11,12 +12,18 @@ type CommunityNeed = {
   created_at: string;
 };
 
-export default function CommunityNeedsList() {
+interface CommunityNeedsListProps {
+  onDonate: () => void;
+}
+
+export default function CommunityNeedsList({ onDonate }: CommunityNeedsListProps) {
   const [needs, setNeeds] = useState<CommunityNeed[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [showDonationForm, setShowDonationForm] = useState(false);
+  const [selectedNeed, setSelectedNeed] = useState<CommunityNeed | null>(null);
 
   // Fetch community needs from API
   const fetchNeeds = async () => {
@@ -45,7 +52,7 @@ export default function CommunityNeedsList() {
 
   // Filter needs based on search term and type
   const filteredNeeds = needs.filter((need) => {
-    const matchesSearch = 
+    const matchesSearch =
       need.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       need.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       need.location.toLowerCase().includes(searchTerm.toLowerCase());
@@ -54,6 +61,17 @@ export default function CommunityNeedsList() {
     
     return matchesSearch && matchesType;
   });
+
+  const handleDonateClick = (need: CommunityNeed) => {
+    setSelectedNeed(need);
+    setShowDonationForm(true);
+  };
+
+  const handleDonationSuccess = () => {
+    setShowDonationForm(false);
+    setSelectedNeed(null);
+    fetchNeeds(); // Refresh the list
+  };
 
   if (loading) {
     return (
@@ -72,6 +90,15 @@ export default function CommunityNeedsList() {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
+      {showDonationForm && selectedNeed && (
+        <DonationForm 
+          needId={selectedNeed.id} 
+          needTitle={selectedNeed.title}
+          onSuccess={handleDonationSuccess}
+          onCancel={() => setShowDonationForm(false)}
+        />
+      )}
+      
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">
           Community Needs ({filteredNeeds.length})
@@ -172,8 +199,11 @@ export default function CommunityNeedsList() {
                 </div>
                 
                 <div className="flex gap-2 mt-4 sm:mt-0 sm:ml-4">
-                  <button className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition-colors">
-                    Volunteer
+                  <button 
+                    onClick={() => handleDonateClick(need)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                  >
+                    Donate
                   </button>
                   <button className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm transition-colors">
                     Details
