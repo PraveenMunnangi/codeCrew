@@ -31,14 +31,24 @@ export default function CommunityNeedsList({ onDonate }: CommunityNeedsListProps
     setError(null);
     try {
       const response = await fetch('/api/community-needs');
-      if (!response.ok) {
-        throw new Error('Failed to fetch community needs');
+      
+      // Check if response is HTML instead of JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
       }
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server returned ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       setNeeds(data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred';
-      setError(message);
+      const message = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(`Failed to fetch community needs: ${message}`);
       setNeeds([]);
     } finally {
       setLoading(false);
@@ -143,12 +153,19 @@ export default function CommunityNeedsList({ onDonate }: CommunityNeedsListProps
       {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-          Error: {error}
+          <p className="font-semibold">Error Loading Data</p>
+          <p className="text-sm">{error}</p>
+          <button 
+            onClick={fetchNeeds}
+            className="mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       )}
 
       {/* Community Needs List */}
-      {filteredNeeds.length === 0 ? (
+      {filteredNeeds.length === 0 && !error ? (
         <div className="text-center py-8">
           <div className="text-gray-400 mb-2">
             <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -86,30 +86,97 @@ export default function HomePage() {
 
   // In your page.tsx, update the fetchStats function:
 
+// const fetchStats = async () => {
+//   try {
+//     const [needsRes, volunteersRes, sponsorsRes, donationsRes] = await Promise.all([
+//       fetch('/api/community-needs'),
+//       fetch('/api/volunteers'),
+//       fetch('/api/sponsors'),
+//       fetch('/api/donations')
+//     ]);
+
+//     const needs = await needsRes.json();
+//     const volunteers = await volunteersRes.json();
+//     const sponsors = await sponsorsRes.json();
+//     const donations = await donationsRes.json();
+
+//     // Count fulfilled needs (needs with at least one donation)
+//     // Add proper error handling for donations
+//     const fulfilledNeeds = donations && Array.isArray(donations) 
+//       ? new Set(donations.map(d => d.need_id)).size 
+//       : 0;
+
+//     setStats({
+//       activeRequests: needs.length || 0,
+//       volunteers: volunteers.length || 0,
+//       sponsors: sponsors.length || 0,
+//       fulfilled: fulfilledNeeds
+//     });
+//   } catch (error) {
+//     console.error("Error fetching stats:", error);
+//     // Set default values if there's an error
+//     setStats({
+//       activeRequests: 0,
+//       volunteers: 0,
+//       sponsors: 0,
+//       fulfilled: 0
+//     });
+//   }
+// };
+
+
 const fetchStats = async () => {
   try {
-    const [needsRes, volunteersRes, sponsorsRes, donationsRes] = await Promise.all([
-      fetch('/api/community-needs'),
-      fetch('/api/volunteers'),
-      fetch('/api/sponsors'),
-      fetch('/api/donations')
+    const endpoints = [
+      '/api/community-needs',
+      '/api/volunteers',
+      '/api/sponsors',
+      '/api/donations'
+    ];
+
+    const responses = await Promise.allSettled(
+      endpoints.map(endpoint => fetch(endpoint))
+    );
+
+    const [needsRes, volunteersRes, sponsorsRes, donationsRes] = responses;
+
+    // Helper function to safely parse responses
+    const safeJsonParse = async (response: PromiseSettledResult<Response>) => {
+      if (response.status === 'rejected') {
+        console.error('Fetch failed:', response.reason);
+        return [];
+      }
+      
+      if (!response.value.ok) {
+        console.error(`API error: ${response.value.status} ${response.value.statusText}`);
+        return [];
+      }
+      
+      try {
+        return await response.value.json();
+      } catch (err) {
+        console.error('JSON parse error:', err);
+        return [];
+      }
+    };
+
+    // Parse all responses safely
+    const [needs, volunteers, sponsors, donations] = await Promise.all([
+      safeJsonParse(needsRes),
+      safeJsonParse(volunteersRes),
+      safeJsonParse(sponsorsRes),
+      safeJsonParse(donationsRes)
     ]);
 
-    const needs = await needsRes.json();
-    const volunteers = await volunteersRes.json();
-    const sponsors = await sponsorsRes.json();
-    const donations = await donationsRes.json();
-
     // Count fulfilled needs (needs with at least one donation)
-    // Add proper error handling for donations
     const fulfilledNeeds = donations && Array.isArray(donations) 
-      ? new Set(donations.map(d => d.need_id)).size 
+      ? new Set(donations.map((d: any) => d.need_id)).size 
       : 0;
 
     setStats({
-      activeRequests: needs.length || 0,
-      volunteers: volunteers.length || 0,
-      sponsors: sponsors.length || 0,
+      activeRequests: Array.isArray(needs) ? needs.length : 0,
+      volunteers: Array.isArray(volunteers) ? volunteers.length : 0,
+      sponsors: Array.isArray(sponsors) ? sponsors.length : 0,
       fulfilled: fulfilledNeeds
     });
   } catch (error) {
